@@ -55,8 +55,8 @@ func (r *relayer) HealthReport() map[string]error {
 	return map[string]error{r.Name(): r.Healthy()}
 }
 
-func (r *relayer) NewChainWriter(_ context.Context, _ []byte) (relaytypes.ChainWriter, error) {
-	return nil, errors.New("chain writer is not supported for starknet")
+func (r *relayer) NewContractWriter(_ context.Context, _ []byte) (relaytypes.ContractWriter, error) {
+	return nil, errors.New("contract writer is not supported for starknet")
 }
 
 func (r *relayer) NewContractReader(_ []byte) (relaytypes.ContractReader, error) {
