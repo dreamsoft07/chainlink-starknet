@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
+	"os"
 	"testing"
 	"time"
+
+	test_env_ctf "github.com/smartcontractkit/chainlink-testing-framework/lib/docker/test_env"
 
 	"github.com/NethermindEth/juno/core/felt"
 	starknetdevnet "github.com/NethermindEth/starknet.go/devnet"
@@ -18,10 +21,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/smartcontractkit/chainlink-common/pkg/logger"
-	test_env_ctf "github.com/smartcontractkit/chainlink-testing-framework/docker/test_env"
-	"github.com/smartcontractkit/chainlink-testing-framework/logging"
+	"github.com/smartcontractkit/chainlink-testing-framework/lib/logging"
 	"github.com/smartcontractkit/chainlink/integration-tests/client"
-	"github.com/smartcontractkit/chainlink/integration-tests/docker/test_env"
+	test_env_integrations "github.com/smartcontractkit/chainlink/integration-tests/docker/test_env"
 
 	test_env_starknet "github.com/smartcontractkit/chainlink-starknet/integration-tests/docker/testenv"
 	"github.com/smartcontractkit/chainlink-starknet/integration-tests/testconfig"
@@ -54,13 +56,14 @@ type AccountDetails struct {
 
 // Clients to access internal methods
 type Clients struct {
-	StarknetClient  *starknet.Client
-	DevnetClient    *starknetdevnet.DevNet
-	KillgraveClient *test_env_ctf.Killgrave
-	OCR2Client      *ocr2.Client
-	ChainlinkClient *ChainlinkClient
-	GauntletClient  *gauntlet.StarknetGauntlet
-	DockerEnv       *StarknetClusterTestEnv
+	StarknetClient   *starknet.Client
+	DevnetClient     *starknetdevnet.DevNet
+	KillgraveClient  *test_env_ctf.Killgrave
+	OCR2Client       *ocr2.Client
+	ChainlinkClient  *ChainlinkClient
+	GauntletClient   *gauntlet.StarknetGauntlet
+	DockerEnv        *StarknetClusterTestEnv
+	GauntletPPClient *gauntlet.StarknetGauntletPlusPlus
 }
 
 // Contracts to store current deployed contract state
@@ -83,7 +86,7 @@ type ChainlinkClient struct {
 }
 
 type StarknetClusterTestEnv struct {
-	*test_env.CLClusterTestEnv
+	*test_env_integrations.CLClusterTestEnv
 	Starknet  *test_env_starknet.Starknet
 	Killgrave *test_env_ctf.Killgrave
 }
@@ -154,7 +157,7 @@ func (m *OCRv2TestState) DeployCluster() {
 		m.Common.RPCDetails.MockServerEndpoint = m.Common.Env.URLs["qa_mock_adapter_internal"][0]
 		m.Common.RPCDetails.MockServerURL = "five"
 	} else { // Otherwise use docker
-		env, err := test_env.NewTestEnv()
+		env, err := test_env_integrations.NewTestEnv()
 		require.NoError(m.TestConfig.T, err)
 		stark := test_env_starknet.NewStarknet([]string{env.DockerNetwork.Name}, *m.Common.TestConfig.Common.DevnetImage)
 		err = stark.StartContainer()
@@ -170,7 +173,7 @@ func (m *OCRv2TestState) DeployCluster() {
 		}
 
 		// Creating docker containers
-		b, err := test_env.NewCLTestEnvBuilder().
+		b, err := test_env_integrations.NewCLTestEnvBuilder().
 			WithNonEVM().
 			WithTestInstance(m.TestConfig.T).
 			WithTestConfig(m.TestConfig.TestConfig).
@@ -182,6 +185,7 @@ func (m *OCRv2TestState) DeployCluster() {
 		require.NoError(m.TestConfig.T, err)
 		env, err = b.Build()
 		require.NoError(m.TestConfig.T, err)
+		env.MockAdapter.ContainerName = os.Getenv("KILLGRAVE_INTERNAL_IMAGE")
 		m.Clients.DockerEnv = &StarknetClusterTestEnv{
 			CLClusterTestEnv: env,
 			Starknet:         stark,
@@ -205,10 +209,11 @@ func (m *OCRv2TestState) DeployCluster() {
 		m.Clients.ChainlinkClient.NKeys, m.TestConfig.err = m.Common.CreateNodeKeysBundle(m.Clients.ChainlinkClient.ChainlinkNodes)
 		require.NoError(m.TestConfig.T, m.TestConfig.err)
 	} else {
-		m.Clients.ChainlinkClient.ChainlinkNodes = m.Clients.DockerEnv.ClCluster.NodeAPIs()
-		m.Clients.ChainlinkClient.NKeys, m.TestConfig.err = m.Common.CreateNodeKeysBundle(m.Clients.DockerEnv.ClCluster.NodeAPIs())
+		m.Clients.ChainlinkClient.ChainlinkNodes = m.Clients.DockerEnv.CLClusterTestEnv.ClCluster.NodeAPIs()
+		m.Clients.ChainlinkClient.NKeys, m.TestConfig.err = m.Common.CreateNodeKeysBundle(m.Clients.DockerEnv.CLClusterTestEnv.ClCluster.NodeAPIs())
 		require.NoError(m.TestConfig.T, m.TestConfig.err)
 	}
+
 	lggr := logger.Nop()
 	m.Clients.StarknetClient, m.TestConfig.err = starknet.NewClient(m.Common.ChainDetails.ChainID, m.Common.RPCDetails.RPCL2External, m.Common.RPCDetails.RPCL2InternalAPIKey, lggr, &rpcRequestTimeout)
 	require.NoError(m.TestConfig.T, m.TestConfig.err, "Creating starknet client should not fail")

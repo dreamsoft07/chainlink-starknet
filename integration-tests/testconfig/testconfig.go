@@ -14,7 +14,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/rs/zerolog"
-	"github.com/smartcontractkit/seth"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -22,11 +21,12 @@ import (
 
 	common_cfg "github.com/smartcontractkit/chainlink-common/pkg/config"
 
-	ctf_config "github.com/smartcontractkit/chainlink-testing-framework/config"
-	k8s_config "github.com/smartcontractkit/chainlink-testing-framework/k8s/config"
-	"github.com/smartcontractkit/chainlink-testing-framework/logging"
-	"github.com/smartcontractkit/chainlink-testing-framework/utils/osutil"
-	"github.com/smartcontractkit/chainlink-testing-framework/utils/ptr"
+	ctf_config "github.com/smartcontractkit/chainlink-testing-framework/lib/config"
+	k8s_config "github.com/smartcontractkit/chainlink-testing-framework/lib/k8s/config"
+	"github.com/smartcontractkit/chainlink-testing-framework/lib/logging"
+	"github.com/smartcontractkit/chainlink-testing-framework/lib/utils/osutil"
+	"github.com/smartcontractkit/chainlink-testing-framework/lib/utils/ptr"
+	"github.com/smartcontractkit/chainlink-testing-framework/seth"
 
 	ocr2_config "github.com/smartcontractkit/chainlink-starknet/integration-tests/testconfig/ocr2"
 	"github.com/smartcontractkit/chainlink-starknet/relayer/pkg/chainlink/config"
@@ -183,14 +183,16 @@ type Common struct {
 	InsideK8s *bool   `toml:"inside_k8"`
 	User      *string `toml:"user"`
 	// if rpc requires api key to be passed as an HTTP header
-	L2RPCApiKey        *string `toml:"l2_rpc_url_api_key"`
-	L2RPCUrl           *string `toml:"l2_rpc_url"`
-	PrivateKey         *string `toml:"private_key"`
-	Account            *string `toml:"account"`
-	Stateful           *bool   `toml:"stateful_db"`
-	InternalDockerRepo *string `toml:"internal_docker_repo"`
-	DevnetImage        *string `toml:"devnet_image"`
-	PostgresVersion    *string `toml:"postgres_version"`
+	L2RPCApiKey           *string `toml:"l2_rpc_url_api_key"`
+	L2RPCUrl              *string `toml:"l2_rpc_url"`
+	PrivateKey            *string `toml:"private_key"`
+	Account               *string `toml:"account"`
+	Stateful              *bool   `toml:"stateful_db"`
+	InternalDockerRepo    *string `toml:"internal_docker_repo"`
+	DevnetImage           *string `toml:"devnet_image"`
+	GauntletPlusPlusImage *string `toml:"gauntlet_plus_plus_image"`
+	PostgresVersion       *string `toml:"postgres_version"`
+	GauntletPlusPlusPort  *string `toml:"gauntlet_plus_plus_port"`
 }
 
 func (c *Common) Validate() error {
@@ -202,6 +204,9 @@ func (c *Common) Validate() error {
 	case "localnet":
 		if c.DevnetImage == nil {
 			return fmt.Errorf("devnet_image must be set")
+		}
+		if c.GauntletPlusPlusImage == nil {
+			return fmt.Errorf("gauntlet_plus_plus_image must be set")
 		}
 	case "testnet":
 		if c.PrivateKey == nil {
@@ -349,6 +354,7 @@ func GetConfig(configurationName string, product Product) (TestConfig, error) {
 	if err != nil {
 		return TestConfig{}, fmt.Errorf("error reading network config: %w", err)
 	}
+	testConfig.ReadEnvVars()
 
 	logger.Debug().Msg("Validating test config")
 	err = testConfig.Validate()
@@ -366,17 +372,18 @@ func GetConfig(configurationName string, product Product) (TestConfig, error) {
 
 func (c *TestConfig) readNetworkConfiguration() error {
 	// currently we need to read that kind of secrets only for network configuration
-	if c == nil {
+	if c.Network == nil {
 		c.Network = &ctf_config.NetworkConfig{}
 	}
-
 	c.Network.UpperCaseNetworkNames()
-	err := c.Network.Default()
-	if err != nil {
-		return fmt.Errorf("error reading default network config: %w", err)
-	}
-
 	return nil
+}
+
+func (c *TestConfig) ReadEnvVars() {
+	image := ctf_config.MustReadEnvVar_String("CHAINLINK_IMAGE")
+	c.ChainlinkImage.Image = &image
+	version := ctf_config.MustReadEnvVar_String("CHAINLINK_VERSION")
+	c.ChainlinkImage.Version = &version
 }
 
 func (c *TestConfig) Validate() error {

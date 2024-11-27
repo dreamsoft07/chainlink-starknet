@@ -21,9 +21,12 @@ use chainlink::ocr2::aggregator::Aggregator::{
 use chainlink::ocr2::aggregator::Aggregator::BillingConfig;
 use chainlink::ocr2::aggregator::Aggregator::PayeeConfig;
 use chainlink::access_control::access_controller::AccessController;
-use chainlink::token::link_token::LinkToken;
-use chainlink::tests::test_ownable::should_implement_ownable;
-use chainlink::tests::test_access_controller::should_implement_access_control;
+use chainlink::token::v2::link_token::LinkToken;
+use chainlink::tests::{
+    test_ownable::should_implement_ownable, test_access_controller::should_implement_access_control,
+    test_link_token::link_deploy_args
+};
+
 
 use snforge_std::{
     declare, ContractClassTrait, start_cheat_caller_address_global, stop_cheat_caller_address_global
@@ -97,10 +100,7 @@ fn setup() -> (
         contract_address: billingAccessControllerAddr
     };
 
-    // deploy link token contract
-    let calldata = array![acc1.into(), // minter = acc1;
-     acc1.into(), // owner = acc1;
-    ];
+    let calldata = link_deploy_args(acc1, acc1);
 
     let (linkTokenAddr, _) = declare("LinkToken").unwrap().deploy(@calldata).unwrap();
 
@@ -144,11 +144,6 @@ fn test_access_control() {
     ];
 
     let (aggregatorAddr, _) = declare("Aggregator").unwrap().deploy(@calldata).unwrap();
-
-    // let (aggregatorAddr, _) = deploy_syscall(
-    //     Aggregator::TEST_CLASS_HASH.try_into().unwrap(), 0, calldata.span(), false
-    // )
-    //     .unwrap();
 
     should_implement_access_control(aggregatorAddr, account);
 }
