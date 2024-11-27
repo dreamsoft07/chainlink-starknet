@@ -8,7 +8,7 @@ require (
 	github.com/ethereum/go-ethereum v1.13.8
 	github.com/hashicorp/go-plugin v1.6.2
 	github.com/pelletier/go-toml/v2 v2.2.0
-	github.com/smartcontractkit/chainlink-common v0.3.1-0.20241126201005-e2524379ea81
+	github.com/smartcontractkit/chainlink-common v0.3.1-0.20241127162636-07aa781ee1f4
 	github.com/smartcontractkit/libocr v0.0.0-20241007185508-adbe57025f12
 	github.com/stretchr/testify v1.9.0
 	go.uber.org/zap v1.27.0
