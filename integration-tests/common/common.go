@@ -12,6 +12,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
+	"gopkg.in/guregu/null.v4"
+
 	ctfconfig "github.com/smartcontractkit/chainlink-testing-framework/lib/config"
 	"github.com/smartcontractkit/chainlink-testing-framework/lib/k8s/environment"
 	"github.com/smartcontractkit/chainlink-testing-framework/lib/k8s/pkg/helm/chainlink"
@@ -100,10 +102,15 @@ func New(testConfig *testconfig.TestConfig) *Common {
 func (c *Common) Default(t *testing.T, namespacePrefix string) (*Common, error) {
 	productName := "data-feedsv2.0"
 	nsLabels, err := environment.GetRequiredChainLinkNamespaceLabels(productName, "soak")
-	require.NoError(o.t, err, "Error creating required chain.link labels for namespace")
+	if err != nil {
+		return nil, err
+	}
 
 	workloadPodLabels, err := environment.GetRequiredChainLinkWorkloadAndPodLabels(productName, "soak")
-	require.NoError(o.t, err, "Error creating required chain.link labels for workloads and pods")
+	if err != nil {
+		return nil, err
+	}
+
 	c.TestEnvDetails.K8Config = &environment.Config{
 		NamespacePrefix: fmt.Sprintf("starknet-%s", namespacePrefix),
 		TTL:             c.TestEnvDetails.TestDuration,

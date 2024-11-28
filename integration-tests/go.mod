@@ -2,8 +2,6 @@ module github.com/smartcontractkit/chainlink-starknet/integration-tests
 
 go 1.23
 
-toolchain go1.23.3
-
 require (
 	github.com/NethermindEth/juno v0.3.1
 	github.com/NethermindEth/starknet.go v0.7.1-0.20240401080518-34a506f3cfdb
@@ -24,6 +22,7 @@ require (
 	github.com/testcontainers/testcontainers-go v0.34.0
 	go.uber.org/zap v1.27.0
 	golang.org/x/text v0.19.0
+	gopkg.in/guregu/null.v4 v4.0.0
 )
 
 require (
@@ -490,7 +489,6 @@ require (
 	google.golang.org/grpc v1.65.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
-	gopkg.in/guregu/null.v4 v4.0.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
