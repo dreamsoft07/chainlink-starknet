@@ -265,8 +265,8 @@ github.com/btcsuite/btcd/btcec/v2 v2.3.4 h1:3EJjcN70HCu/mwqlUsGK8GcNVyLVxFDlWurT
 github.com/btcsuite/btcd/btcec/v2 v2.3.4/go.mod h1:zYzJ8etWJQIv1Ogk7OzpWjowwOdXY1W/17j2MW85J04=
 github.com/btcsuite/btcd/btcutil v1.1.6 h1:zFL2+c3Lb9gEgqKNzowKUPQNb8jV7v5Oaodi/AYFd6c=
 github.com/btcsuite/btcd/btcutil v1.1.6/go.mod h1:9dFymx8HpuLqBnsPELrImQeTQfKBQqzqGbbV3jK55aE=
-github.com/btcsuite/btcd/chaincfg/chainhash v1.0.3 h1:SDlJ7bAm4ewvrmZtR0DaiYbQGdKPeaaIm7bM+qRhFeU=
-github.com/btcsuite/btcd/chaincfg/chainhash v1.0.3/go.mod h1:7SFka0XMvUgj3hfZtydOrQY2mwhPclbT2snogU7SQQc=
+github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 h1:59Kx4K6lzOW5w6nFlA0v5+lk/6sjybR934QNHSJZPTQ=
+github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0/go.mod h1:7SFka0XMvUgj3hfZtydOrQY2mwhPclbT2snogU7SQQc=
 github.com/bufbuild/protocompile v0.4.0 h1:LbFKd2XowZvQ/kajzguUp2DC9UEIQhIq77fZZlaQsNA=
 github.com/bufbuild/protocompile v0.4.0/go.mod h1:3v93+mbWn/v3xzN+31nwkJfrEpAUwp+BagBSZWx+TP8=
 github.com/buger/jsonparser v1.1.1 h1:2PnMjfWD7wBILjqQbt530v576A/cAbQvEW9gGIpYMUs=
@@ -727,8 +727,8 @@ github.com/google/pprof v0.0.0-20200229191704-1ebb73c60ed3/go.mod h1:ZgVRPoUq/hf
 github.com/google/pprof v0.0.0-20200430221834-fc25d7d30c6d/go.mod h1:ZgVRPoUq/hfqzAqh7sHMqb3I9Rq5C59dIz2SbBwJ4eM=
 github.com/google/pprof v0.0.0-20200708004538-1a94d8640e99/go.mod h1:ZgVRPoUq/hfqzAqh7sHMqb3I9Rq5C59dIz2SbBwJ4eM=
 github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38/go.mod h1:kpwsk12EmLew5upagYY7GY0pfYCcupk39gWOCRROcvE=
-github.com/google/pprof v0.0.0-20240711041743-f6c9dda6c6da h1:xRmpO92tb8y+Z85iUOMOicpCfaYcv7o3Cg3wKrIpg8g=
-github.com/google/pprof v0.0.0-20240711041743-f6c9dda6c6da/go.mod h1:K1liHPHnj73Fdn/EKuT8nrFqBihUSKXoLYU0BuatOYo=
+github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5 h1:5iH8iuqE5apketRbSFBy+X1V0o+l+8NF1avt4HWl7cA=
+github.com/google/pprof v0.0.0-20240827171923-fa2c70bbbfe5/go.mod h1:vavhavw2zAxS5dIdcRluK6cSGGPlZynqzFM8NdvU144=
 github.com/google/renameio v0.1.0/go.mod h1:KWCgfxg9yswjAJkECMjeO8J8rahYeXnNhOm40UhjYkI=
 github.com/google/s2a-go v0.1.8 h1:zZDs9gcbt9ZPLV0ndSyQk6Kacx2g/X+SKYovpnz3SMM=
 github.com/google/s2a-go v0.1.8/go.mod h1:6iNWHTpQ+nfNRN5E00MSdfDwVesa8hhS32PhPO8deJA=
@@ -1383,8 +1383,8 @@ github.com/smartcontractkit/chainlink-ccip v0.0.0-20241126213415-2f00a319d84b h1
 github.com/smartcontractkit/chainlink-ccip v0.0.0-20241126213415-2f00a319d84b/go.mod h1:w0ryf2zD9DiXdXkD/KYPHu1vZnvoau2+gS84YQ0btcc=
 github.com/smartcontractkit/chainlink-common v0.3.1-0.20241127162636-07aa781ee1f4 h1:atCZ1jol7a+tdtgU/wNqXgliBun5H7BjGBicGL8Tj6o=
 github.com/smartcontractkit/chainlink-common v0.3.1-0.20241127162636-07aa781ee1f4/go.mod h1:bQktEJf7sJ0U3SmIcXvbGUox7SmXcnSEZ4kUbT8R5Nk=
-github.com/smartcontractkit/chainlink-cosmos v0.5.2-0.20241126213129-304be43f0162 h1:Xv3KEh7l25La7q+QU0Ln6W0KdCYBsCcneqMFzLgJOvI=
-github.com/smartcontractkit/chainlink-cosmos v0.5.2-0.20241126213129-304be43f0162/go.mod h1:Q7IbnkoczAvEgDYKlTZdbkfMUY5wshxdx5wFfVvXC6M=
+github.com/smartcontractkit/chainlink-cosmos v0.5.2-0.20241128182616-9941be1eb23e h1:FF6mW3vVovL6ct0TmsHus+akPoSLAb2xHHDotu0yVKU=
+github.com/smartcontractkit/chainlink-cosmos v0.5.2-0.20241128182616-9941be1eb23e/go.mod h1:mUh5/woemsVaHgTorA080hrYmO3syBCmPdnWc/5dOqk=
 github.com/smartcontractkit/chainlink-data-streams v0.1.1-0.20241114154055-8d29ea018b57 h1:1BMTG66HnCIz+KMBWGvyzELNM6VHGwv2WKFhN7H49Sg=
 github.com/smartcontractkit/chainlink-data-streams v0.1.1-0.20241114154055-8d29ea018b57/go.mod h1:QPiorgpbLv4+Jn4YO6xxU4ftTu4T3QN8HwX3ImP59DE=
 github.com/smartcontractkit/chainlink-feeds v0.1.1 h1:JzvUOM/OgGQA1sOqTXXl52R6AnNt+Wg64sVG+XSA49c=
@@ -1403,8 +1403,8 @@ github.com/smartcontractkit/chainlink-testing-framework/wasp v1.50.1 h1:hbapxD2w
 github.com/smartcontractkit/chainlink-testing-framework/wasp v1.50.1/go.mod h1:tMdjHVfgp1QBLfVieSTGNR0kem8cOnH2bOXXXiaTwZ0=
 github.com/smartcontractkit/chainlink/integration-tests v0.0.0-20241012135014-37f3132362ec h1:S9WyGN0+m3umge1rGgZJI+ljozc/COZt9nSNA3tqA1s=
 github.com/smartcontractkit/chainlink/integration-tests v0.0.0-20241012135014-37f3132362ec/go.mod h1:kMiICu9TUtelsGy44wkwnKbFRINnsBBoAMXotfNm78Q=
-github.com/smartcontractkit/chainlink/v2 v2.14.0-mercury-20240807.0.20241127211239-e87d57e811d0 h1:bPOheort2mnjJoM/30SSKxxo1geXWkKfocJRpRzNmO0=
-github.com/smartcontractkit/chainlink/v2 v2.14.0-mercury-20240807.0.20241127211239-e87d57e811d0/go.mod h1:TSpTCS/Hl2lL69WZj9yJKee+x50eCBX7kHKZoD2muD8=
+github.com/smartcontractkit/chainlink/v2 v2.14.0-mercury-20240807.0.20241129090635-1946e4ddbcb7 h1:zpQFODOyw9LOLKPHb2KbDATO0NzD5HzNSaCawdqTI9U=
+github.com/smartcontractkit/chainlink/v2 v2.14.0-mercury-20240807.0.20241129090635-1946e4ddbcb7/go.mod h1:VnTE4T4wIe4A1Nv8nIxe81COb6tulAEV/HL4FDUtL5I=
 github.com/smartcontractkit/gauntlet-plus-plus/sdks/go-gauntlet v1.1.3 h1:RIApVijvhHI6iW9pyT35Nk39rPGEC4TwVe/f+YA1G5k=
 github.com/smartcontractkit/gauntlet-plus-plus/sdks/go-gauntlet v1.1.3/go.mod h1:oiUkQxoi0kZzbW125oIt4lr/pqaRSDol1rWHLCyqmNQ=
 github.com/smartcontractkit/grpc-proxy v0.0.0-20240830132753-a7e17fec5ab7 h1:12ijqMM9tvYVEm+nR826WsrNi6zCKpwBhuApq127wHs=
