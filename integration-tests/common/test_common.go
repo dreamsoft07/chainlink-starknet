@@ -194,9 +194,9 @@ func (m *OCRv2TestState) DeployCluster() {
 
 		// Setting up Mock adapter
 		m.Clients.KillgraveClient = env.MockAdapter
-		m.Common.RPCDetails.MockServerEndpoint = m.Clients.Killgravenodeclient.InternalEndpoint
+		m.Common.RPCDetails.MockServerEndpoint = m.Clients.KillgraveClient.InternalEndpoint
 		m.Common.RPCDetails.MockServerURL = "mockserver-bridge"
-		err = m.Clients.Killgravenodeclient.SetAdapterBasedIntValuePath("/mockserver-bridge", []string{http.MethodGet, http.MethodPost}, 10)
+		err = m.Clients.KillgraveClient.SetAdapterBasedIntValuePath("/mockserver-bridge", []string{http.MethodGet, http.MethodPost}, 10)
 		require.NoError(m.TestConfig.T, err, "Failed to set mock adapter value")
 	}
 
@@ -205,12 +205,12 @@ func (m *OCRv2TestState) DeployCluster() {
 	if *m.Common.TestConfig.Common.InsideK8s {
 		m.ChainlinkNodesK8s, m.TestConfig.err = nodeclient.ConnectChainlinkNodes(m.Common.Env)
 		require.NoError(m.TestConfig.T, m.TestConfig.err)
-		m.Clients.Chainlinknodeclient.ChainlinkNodes = m.GetChainlinkNodes()
-		m.Clients.Chainlinknodeclient.NKeys, m.TestConfig.err = m.Common.CreateNodeKeysBundle(m.Clients.Chainlinknodeclient.ChainlinkNodes)
+		m.Clients.ChainlinkClient.ChainlinkNodes = m.GetChainlinkNodes()
+		m.Clients.ChainlinkClient.NKeys, m.TestConfig.err = m.Common.CreateNodeKeysBundle(m.Clients.ChainlinkClient.ChainlinkNodes)
 		require.NoError(m.TestConfig.T, m.TestConfig.err)
 	} else {
-		m.Clients.Chainlinknodeclient.ChainlinkNodes = m.Clients.DockerEnv.CLClusterTestEnv.ClCluster.NodeAPIs()
-		m.Clients.Chainlinknodeclient.NKeys, m.TestConfig.err = m.Common.CreateNodeKeysBundle(m.Clients.DockerEnv.CLClusterTestEnv.ClCluster.NodeAPIs())
+		m.Clients.ChainlinkClient.ChainlinkNodes = m.Clients.DockerEnv.CLClusterTestEnv.ClCluster.NodeAPIs()
+		m.Clients.ChainlinkClient.NKeys, m.TestConfig.err = m.Common.CreateNodeKeysBundle(m.Clients.DockerEnv.CLClusterTestEnv.ClCluster.NodeAPIs())
 		require.NoError(m.TestConfig.T, m.TestConfig.err)
 	}
 
@@ -224,7 +224,7 @@ func (m *OCRv2TestState) DeployCluster() {
 	if *m.Common.TestConfig.Common.Network == "localnet" {
 		// fetch predeployed account 0 to use as funder
 		m.Clients.DevnetClient = starknetdevnet.NewDevNet(m.Common.RPCDetails.RPCL2External)
-		accounts, err := m.Clients.Devnetnodeclient.Accounts()
+		accounts, err := m.Clients.DevnetClient.Accounts()
 		require.NoError(m.TestConfig.T, err)
 		account := accounts[0]
 		m.Account.Account = account.Address
@@ -248,10 +248,10 @@ func (m *OCRv2TestState) LoadOCR2Config() (*ops.OCR2Config, error) {
 	var peerIDs []string
 	var txKeys []string
 	var cfgKeys []string
-	for i, key := range m.Clients.Chainlinknodeclient.NKeys {
+	for i, key := range m.Clients.ChainlinkClient.NKeys {
 		offChaiNKeys = append(offChaiNKeys, key.OCR2Key.Data.Attributes.OffChainPublicKey)
 		peerIDs = append(peerIDs, key.PeerID)
-		txKeys = append(txKeys, m.Clients.Chainlinknodeclient.AccountAddresses[i])
+		txKeys = append(txKeys, m.Clients.ChainlinkClient.AccountAddresses[i])
 		onChaiNKeys = append(onChaiNKeys, key.OCR2Key.Data.Attributes.OnChainPublicKey)
 		cfgKeys = append(cfgKeys, key.OCR2Key.Data.Attributes.ConfigPublicKey)
 	}
@@ -267,13 +267,13 @@ func (m *OCRv2TestState) LoadOCR2Config() (*ops.OCR2Config, error) {
 }
 
 func (m *OCRv2TestState) SetUpNodes() {
-	err := m.Common.CreateJobsForContract(m.GetChainlinkClient(), m.Contracts.ObservationSource, m.Contracts.JuelsPerFeeCoinSource, m.Contracts.OCRAddr, m.Clients.Chainlinknodeclient.AccountAddresses)
+	err := m.Common.CreateJobsForContract(m.GetChainlinkClient(), m.Contracts.ObservationSource, m.Contracts.JuelsPerFeeCoinSource, m.Contracts.OCRAddr, m.Clients.ChainlinkClient.AccountAddresses)
 	require.NoError(m.TestConfig.T, err, "Creating jobs should not fail")
 }
 
 // GetNodeKeys Returns the node key bundles
 func (m *OCRv2TestState) GetNodeKeys() []nodeclient.NodeKeysBundle {
-	return m.Clients.Chainlinknodeclient.NKeys
+	return m.Clients.ChainlinkClient.NKeys
 }
 
 func (m *OCRv2TestState) GetChainlinkNodes() []*nodeclient.ChainlinkClient {
@@ -290,7 +290,7 @@ func (m *OCRv2TestState) GetChainlinkClient() *ChainlinkClient {
 }
 
 func (m *OCRv2TestState) SetBridgeTypeAttrs(attr *nodeclient.BridgeTypeAttributes) {
-	m.Clients.Chainlinknodeclient.bTypeAttr = attr
+	m.Clients.ChainlinkClient.bTypeAttr = attr
 }
 
 func (m *OCRv2TestState) GetDefaultObservationSource() string {
@@ -327,13 +327,13 @@ func (m *OCRv2TestState) ValidateRounds(rounds int, isSoak bool) error {
 	if err != nil {
 		return err
 	}
-	resLINK, errLINK := m.Clients.Starknetnodeclient.CallContract(ctx, starknet.CallOps{
+	resLINK, errLINK := m.Clients.StarknetClient.CallContract(ctx, starknet.CallOps{
 		ContractAddress: linkContractAddress,
 		Selector:        starknetutils.GetSelectorFromNameFelt("balance_of"),
 		Calldata:        []*felt.Felt{contractAddress},
 	})
 	require.NoError(m.TestConfig.T, errLINK, "Reader balance from LINK contract should not fail", "err", errLINK)
-	resAgg, errAgg := m.Clients.Starknetnodeclient.CallContract(ctx, starknet.CallOps{
+	resAgg, errAgg := m.Clients.StarknetClient.CallContract(ctx, starknet.CallOps{
 		ContractAddress: contractAddress,
 		Selector:        starknetutils.GetSelectorFromNameFelt("link_available_for_payment"),
 	})
@@ -350,7 +350,7 @@ func (m *OCRv2TestState) ValidateRounds(rounds int, isSoak bool) error {
 
 	for start := time.Now(); time.Since(start) < m.Common.TestEnvDetails.TestDuration; {
 		m.TestConfig.L.Info().Msg(fmt.Sprintf("Elapsed time: %s, Round wait: %s ", time.Since(start), m.Common.TestEnvDetails.TestDuration))
-		res, err2 := m.Clients.OCR2nodeclient.LatestTransmissionDetails(ctx, contractAddress)
+		res, err2 := m.Clients.OCR2Client.LatestTransmissionDetails(ctx, contractAddress)
 		require.NoError(m.TestConfig.T, err2, "Failed to get latest transmission details")
 		// end condition: enough rounds have occurred
 		if !isSoak && increasing >= rounds && positive {
@@ -427,7 +427,7 @@ func (m *OCRv2TestState) ValidateRounds(rounds int, isSoak bool) error {
 	if err != nil {
 		return err
 	}
-	roundDataRaw, err := m.Clients.Starknetnodeclient.CallContract(ctx, starknet.CallOps{
+	roundDataRaw, err := m.Clients.StarknetClient.CallContract(ctx, starknet.CallOps{
 		ContractAddress: proxyAddress,
 		Selector:        starknetutils.GetSelectorFromNameFelt("latest_round_data"),
 	})
