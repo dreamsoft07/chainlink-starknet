@@ -533,8 +533,12 @@ require (
 )
 
 replace (
-	// indirect chooses latest version which breaks the cosmos-sdk build
+	github.com/btcsuite/btcd => github.com/btcsuite/btcd v0.22.1
+	github.com/btcsuite/btcd/btcec/v2 => github.com/btcsuite/btcd/btcec/v2 v2.3.3
+	// ---- indirect chooses latest version which breaks the cosmos-sdk build
 	github.com/cometbft/cometbft => github.com/cometbft/cometbft v0.37.5
+	// ----
+
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 
 	// Make sure we're working with the latest ops
