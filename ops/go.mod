@@ -2,6 +2,8 @@ module github.com/smartcontractkit/chainlink-starknet/ops
 
 go 1.23
 
+toolchain go1.23.3
+
 require (
 	github.com/rs/zerolog v1.33.0
 	github.com/smartcontractkit/chainlink-env v0.3.29
