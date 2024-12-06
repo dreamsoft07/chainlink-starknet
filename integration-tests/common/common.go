@@ -12,7 +12,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/lib/pq"
 	"github.com/rs/zerolog/log"
-	"github.com/stretchr/testify/require"
 	"gopkg.in/guregu/null.v4"
 
 	ctfconfig "github.com/smartcontractkit/chainlink-testing-framework/lib/config"
@@ -22,6 +21,7 @@ import (
 	"github.com/smartcontractkit/chainlink/deployment/environment/nodeclient"
 	"github.com/smartcontractkit/chainlink/integration-tests/docker/test_env"
 	"github.com/smartcontractkit/chainlink/v2/core/services/job"
+	"github.com/stretchr/testify/require"
 
 	chainconfig "github.com/smartcontractkit/chainlink-starknet/integration-tests/config"
 	"github.com/smartcontractkit/chainlink-starknet/integration-tests/testconfig"
@@ -100,10 +100,24 @@ func New(testConfig *testconfig.TestConfig) *Common {
 }
 
 func (c *Common) Default(t *testing.T, namespacePrefix string) (*Common, error) {
+	productName := "data-feedsv2.0"
+	nsLabels, err := environment.GetRequiredChainLinkNamespaceLabels(productName, "soak")
+	if err != nil {
+		return nil, err
+	}
+
+	workloadPodLabels, err := environment.GetRequiredChainLinkWorkloadAndPodLabels(productName, "soak")
+	if err != nil {
+		return nil, err
+	}
+
 	c.TestEnvDetails.K8Config = &environment.Config{
 		NamespacePrefix: fmt.Sprintf("starknet-%s", namespacePrefix),
 		TTL:             c.TestEnvDetails.TestDuration,
 		Test:            t,
+		Labels:          nsLabels,
+		WorkloadLabels:  workloadPodLabels,
+		PodLabels:       workloadPodLabels,
 	}
 
 	if *c.TestConfig.Common.InsideK8s {

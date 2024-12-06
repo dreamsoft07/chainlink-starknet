@@ -7,7 +7,7 @@ toolchain go1.23.3
 require (
 	github.com/rs/zerolog v1.33.0
 	github.com/smartcontractkit/chainlink-env v0.3.29
-	github.com/smartcontractkit/chainlink-testing-framework/lib v1.50.17
+	github.com/smartcontractkit/chainlink-testing-framework/lib v1.50.18
 	github.com/smartcontractkit/gauntlet-plus-plus/sdks/go-gauntlet v1.1.3
 )
 

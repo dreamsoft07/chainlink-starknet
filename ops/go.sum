@@ -293,8 +293,8 @@ github.com/sirupsen/logrus v1.9.3 h1:dueUQJ1C2q9oE3F7wvmSGAaVtTmUizReu6fjN8uqzbQ
 github.com/sirupsen/logrus v1.9.3/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/smartcontractkit/chainlink-env v0.3.29 h1:hcIw/BeuB0wKiiE3umAUNBZzWkHO24XF3OW9xSrlMbI=
 github.com/smartcontractkit/chainlink-env v0.3.29/go.mod h1:9c0Czq4a6wZKY20BcoAlK29DnejQIiLo/MwKYtSFnHk=
-github.com/smartcontractkit/chainlink-testing-framework/lib v1.50.17 h1:Fw2F8fKa5QdOUzLAj6Y/EB6XFC0QtK2pw5bqQSatL4A=
-github.com/smartcontractkit/chainlink-testing-framework/lib v1.50.17/go.mod h1:NwmlNKqrb02v4Sci4b5KW644nfH2BW+FrKbWwTN5r6M=
+github.com/smartcontractkit/chainlink-testing-framework/lib v1.50.18 h1:a3xetGZh2nFO1iX5xd9OuqiCkgbWLvW6fTN6fgVubPo=
+github.com/smartcontractkit/chainlink-testing-framework/lib v1.50.18/go.mod h1:NwmlNKqrb02v4Sci4b5KW644nfH2BW+FrKbWwTN5r6M=
 github.com/smartcontractkit/gauntlet-plus-plus/sdks/go-gauntlet v1.1.3 h1:RIApVijvhHI6iW9pyT35Nk39rPGEC4TwVe/f+YA1G5k=
 github.com/smartcontractkit/gauntlet-plus-plus/sdks/go-gauntlet v1.1.3/go.mod h1:oiUkQxoi0kZzbW125oIt4lr/pqaRSDol1rWHLCyqmNQ=
 github.com/spf13/cobra v1.8.1 h1:e5/vxKd/rZsfSJMUX1agtjeTDf+qv1/JdBF8gg5k9ZM=
