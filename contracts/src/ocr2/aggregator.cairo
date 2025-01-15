@@ -106,10 +106,10 @@ trait Billing<TContractState> {
     fn owed_payment(self: @TContractState, transmitter: ContractAddress) -> u128;
     fn withdraw_funds(ref self: TContractState, recipient: ContractAddress, amount: u256);
     fn link_available_for_payment(
-        self: @TContractState
+        self: @TContractState,
     ) -> (bool, u128); // (is negative, absolute difference)
     fn set_link_token(
-        ref self: TContractState, link_token: ContractAddress, recipient: ContractAddress
+        ref self: TContractState, link_token: ContractAddress, recipient: ContractAddress,
     );
 }
 
@@ -123,7 +123,7 @@ struct PayeeConfig {
 trait PayeeManagement<TContractState> {
     fn set_payees(ref self: TContractState, payees: Array<PayeeConfig>);
     fn transfer_payeeship(
-        ref self: TContractState, transmitter: ContractAddress, proposed: ContractAddress
+        ref self: TContractState, transmitter: ContractAddress, proposed: ContractAddress,
     );
     fn accept_payeeship(ref self: TContractState, transmitter: ContractAddress);
 }
@@ -134,7 +134,7 @@ use option::OptionTrait;
 use hash::LegacyHash;
 
 fn hash_span<T, impl THash: LegacyHash<T>, impl TCopy: Copy<T>>(
-    state: felt252, mut value: Span<T>
+    state: felt252, mut value: Span<T>,
 ) -> felt252 {
     let item = value.pop_front();
     match item {
@@ -170,48 +170,43 @@ impl SpanLegacyHash<T, impl THash: LegacyHash<T>, impl TCopy: Copy<T>> of Legacy
 
 #[starknet::contract]
 mod Aggregator {
-    use super::Round;
-    use super::{Transmission};
-    use super::SpanLegacyHash;
-    use super::pow;
+    use super::{Round, Transmission, SpanLegacyHash, pow};
 
-    use array::ArrayTrait;
-    use array::SpanTrait;
+    use array::{ArrayTrait, SpanTrait};
     use box::BoxTrait;
     use hash::LegacyHash;
-    use integer::U128IntoFelt252;
-    use integer::u128s_from_felt252;
-    use integer::U128sFromFelt252Result;
+    use integer::{U128IntoFelt252, u128s_from_felt252, U128sFromFelt252Result};
     use zeroable::Zeroable;
-    use traits::Into;
-    use traits::TryInto;
+    use traits::{Into, TryInto};
     use option::OptionTrait;
 
-    use starknet::ContractAddress;
-    use starknet::get_caller_address;
-    use starknet::contract_address_const;
-    use starknet::StorageBaseAddress;
-    use starknet::SyscallResult;
-    use starknet::storage_read_syscall;
-    use starknet::storage_write_syscall;
-    use starknet::storage_address_from_base_and_offset;
-    use starknet::class_hash::ClassHash;
+    use starknet::{
+        ContractAddress, get_caller_address, contract_address_const, StorageBaseAddress,
+        SyscallResult, storage_read_syscall, storage_write_syscall,
+        storage_address_from_base_and_offset, class_hash::ClassHash, storage::Map,
+    };
 
     use openzeppelin::access::ownable::OwnableComponent;
+    use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::token::erc20::interface::{IERC20, IERC20Dispatcher, IERC20DispatcherTrait};
 
     use chainlink::utils::split_felt;
-    use chainlink::libraries::access_control::{AccessControlComponent, IAccessController};
-    use chainlink::libraries::access_control::AccessControlComponent::InternalTrait as AccessControlInternalTrait;
-    use chainlink::libraries::upgradeable::{Upgradeable, IUpgradeable};
-
     use chainlink::libraries::access_control::{
-        IAccessControllerDispatcher, IAccessControllerDispatcherTrait
+        AccessControlComponent, IAccessController,
+        AccessControlComponent::InternalTrait as AccessControlInternalTrait,
+    };
+    use chainlink::libraries::upgrades::v2::owner_upgradeable::OwnerUpgradeableComponent;
+    use chainlink::libraries::access_control::{
+        IAccessControllerDispatcher, IAccessControllerDispatcherTrait,
     };
     use chainlink::libraries::type_and_version::ITypeAndVersion;
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
     component!(path: AccessControlComponent, storage: access_control, event: AccessControlEvent);
+    component!(path: UpgradeableComponent, storage: upgradeable, event: UpgradeableEvent);
+    component!(
+        path: OwnerUpgradeableComponent, storage: owner_upgradeable, event: OwnerUpgradeableEvent,
+    );
 
     #[abi(embed_v0)]
     impl OwnableImpl = OwnableComponent::OwnableTwoStepImpl<ContractState>;
@@ -221,6 +216,12 @@ mod Aggregator {
     impl AccessControlImpl =
         AccessControlComponent::AccessControlImpl<ContractState>;
     impl AccessControlInternalImpl = AccessControlComponent::InternalImpl<ContractState>;
+
+    impl UpgradeableInternalImpl = UpgradeableComponent::InternalImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl OwnerUpgradeableImpl =
+        OwnerUpgradeableComponent::OwnerUpgradeableImpl<ContractState>;
 
     const GIGA: u128 = 1000000000_u128;
 
@@ -233,6 +234,10 @@ mod Aggregator {
         OwnableEvent: OwnableComponent::Event,
         #[flat]
         AccessControlEvent: AccessControlComponent::Event,
+        #[flat]
+        UpgradeableEvent: UpgradeableComponent::Event,
+        #[flat]
+        OwnerUpgradeableEvent: OwnerUpgradeableComponent::Event,
         NewTransmission: NewTransmission,
         ConfigSet: ConfigSet,
         LinkTokenSet: LinkTokenSet,
@@ -257,7 +262,7 @@ mod Aggregator {
         gas_price: u128,
         config_digest: felt252,
         epoch_and_round: u64,
-        reimbursement: u128
+        reimbursement: u128,
     }
 
     #[derive(Copy, Drop, Serde, starknet::Store)]
@@ -293,6 +298,10 @@ mod Aggregator {
         ownable: OwnableComponent::Storage,
         #[substorage(v0)]
         access_control: AccessControlComponent::Storage,
+        #[substorage(v0)]
+        upgradeable: UpgradeableComponent::Storage,
+        #[substorage(v0)]
+        owner_upgradeable: OwnerUpgradeableComponent::Storage,
         /// Maximum number of faulty oracles
         _f: u8,
         _latest_epoch_and_round: u64, // (u32, u32)
@@ -306,22 +315,20 @@ mod Aggregator {
         _latest_config_digest: felt252,
         // _oracles: Array<Oracle>, // NOTE: array can't be used in storage
         _oracles_len: usize,
-        _transmitters: LegacyMap<ContractAddress, Oracle>, // <pkey, Oracle>
-        _signers: LegacyMap<felt252, usize>, // <pkey, index>
-        _signers_list: LegacyMap<usize, felt252>,
-        _transmitters_list: LegacyMap<usize, ContractAddress>,
-        _reward_from_aggregator_round_id: LegacyMap<usize, u128>, // <index, round_id>
-        _transmissions: LegacyMap<u128, Transmission>,
+        _transmitters: Map<ContractAddress, Oracle>, // <pkey, Oracle>
+        _signers: Map<felt252, usize>, // <pkey, index>
+        _signers_list: Map<usize, felt252>,
+        _transmitters_list: Map<usize, ContractAddress>,
+        _reward_from_aggregator_round_id: Map<usize, u128>, // <index, round_id>
+        _transmissions: Map<u128, Transmission>,
         // link token
         _link_token: ContractAddress,
         // billing
         _billing_access_controller: ContractAddress,
         _billing: BillingConfig,
         // payee management
-        _payees: LegacyMap<ContractAddress, ContractAddress>, // <transmitter, payment_address>
-        _proposed_payees: LegacyMap<
-            ContractAddress, ContractAddress
-        > // <transmitter, payment_address>
+        _payees: Map<ContractAddress, ContractAddress>, // <transmitter, payment_address>
+        _proposed_payees: Map<ContractAddress, ContractAddress> // <transmitter, payment_address>
     }
 
     #[generate_trait]
@@ -395,10 +402,10 @@ mod Aggregator {
         max_answer: u128,
         billing_access_controller: ContractAddress,
         decimals: u8,
-        description: felt252
+        description: felt252,
     ) {
         self.ownable.initializer(owner);
-        self.access_control.initializer();
+        self.access_control.initializer(true);
         self._link_token.write(link);
         self._billing_access_controller.write(billing_access_controller);
 
@@ -408,16 +415,6 @@ mod Aggregator {
 
         self._decimals.write(decimals);
         self._description.write(description);
-    }
-
-    // --- Upgradeable ---
-
-    #[abi(embed_v0)]
-    impl UpgradeableImpl of IUpgradeable<ContractState> {
-        fn upgrade(ref self: ContractState, new_impl: ClassHash) {
-            self.ownable.assert_only_owner();
-            Upgradeable::upgrade(new_impl)
-        }
     }
 
     // --- Validation ---
@@ -562,9 +559,9 @@ mod Aggregator {
                             f: f,
                             onchain_config: computed_onchain_config,
                             offchain_config_version: offchain_config_version,
-                            offchain_config: offchain_config
-                        }
-                    )
+                            offchain_config: offchain_config,
+                        },
+                    ),
                 );
 
             digest
@@ -611,34 +608,33 @@ mod Aggregator {
         }
 
         fn add_oracles(
-            ref self: ContractState, oracles: @Array<OracleConfig>, latest_round_id: u128
+            ref self: ContractState, oracles: @Array<OracleConfig>, latest_round_id: u128,
         ) {
             let mut index = 0;
             let mut span = oracles.span();
-            while let Option::Some(oracle) = span
-                .pop_front() {
-                    // NOTE: index should start with 1 here because storage is 0-initialized.
-                    // That way signers(pkey) => 0 indicates "not present"
-                    // This is why we increment first, before using the index
-                    index += 1;
+            while let Option::Some(oracle) = span.pop_front() {
+                // NOTE: index should start with 1 here because storage is 0-initialized.
+                // That way signers(pkey) => 0 indicates "not present"
+                // This is why we increment first, before using the index
+                index += 1;
 
-                    // check for duplicates
-                    let existing_signer = self._signers.read(*oracle.signer);
-                    assert(existing_signer == 0_usize, 'repeated signer');
+                // check for duplicates
+                let existing_signer = self._signers.read(*oracle.signer);
+                assert(existing_signer == 0_usize, 'repeated signer');
 
-                    let existing_transmitter = self._transmitters.read(*oracle.transmitter);
-                    assert(existing_transmitter.index == 0_usize, 'repeated transmitter');
+                let existing_transmitter = self._transmitters.read(*oracle.transmitter);
+                assert(existing_transmitter.index == 0_usize, 'repeated transmitter');
 
-                    self._signers.write(*oracle.signer, index);
-                    self._signers_list.write(index, *oracle.signer);
+                self._signers.write(*oracle.signer, index);
+                self._signers_list.write(index, *oracle.signer);
 
-                    self
-                        ._transmitters
-                        .write(*oracle.transmitter, Oracle { index, payment_juels: 0_u128 });
-                    self._transmitters_list.write(index, *oracle.transmitter);
+                self
+                    ._transmitters
+                    .write(*oracle.transmitter, Oracle { index, payment_juels: 0_u128 });
+                self._transmitters_list.write(index, *oracle.transmitter);
 
-                    self._reward_from_aggregator_round_id.write(index, latest_round_id);
-                };
+                self._reward_from_aggregator_round_id.write(index, latest_round_id);
+            };
             self._oracles_len.write(index);
         }
     }
@@ -669,7 +665,7 @@ mod Aggregator {
             observers: felt252,
             observations: @Array<u128>,
             juels_per_fee_coin: u128,
-            gas_price: u128
+            gas_price: u128,
         ) -> felt252 {
             let mut state = 0;
             state = LegacyHash::hash(state, *report_context.config_digest);
@@ -696,7 +692,7 @@ mod Aggregator {
                 config_digest,
                 epoch_and_round,
                 transmission.answer,
-                transmission.transmission_timestamp
+                transmission.transmission_timestamp,
             )
         }
 
@@ -735,16 +731,16 @@ mod Aggregator {
                     observers,
                     @observations,
                     juels_per_fee_coin,
-                    gas_price
+                    gas_price,
                 );
 
             // Check all signatures are unique (we only saw each pubkey once)
-            // NOTE: This relies on protocol-level design constraints (MAX_ORACLES = 31, f = 10) which
-            // ensures we have enough bits to store a count for each oracle. Whenever the MAX_ORACLES
-            // is updated, the signed_count parameter should be reconsidered.
+            // NOTE: This relies on protocol-level design constraints (MAX_ORACLES = 31, f = 10)
+            // which ensures we have enough bits to store a count for each oracle. Whenever the
+            // MAX_ORACLES is updated, the signed_count parameter should be reconsidered.
             //
-            // Although 31 bits is enough, we use a u128 here for simplicity because BitAnd and BitOr
-            // operators are defined only for u128 and u256.
+            // Although 31 bits is enough, we use a u128 here for simplicity because BitAnd and
+            // BitOr operators are defined only for u128 and u256.
             assert(MAX_ORACLES == 31_u32, '');
             self.verify_signatures(msg, ref signatures, 0_u128);
 
@@ -763,7 +759,7 @@ mod Aggregator {
             let min_answer = self._min_answer.read();
             let max_answer = self._max_answer.read();
             assert(
-                (min_answer <= median) & (median <= max_answer), 'median is out of min-max range'
+                (min_answer <= median) & (median <= max_answer), 'median is out of min-max range',
             );
 
             let prev_round_id = self._latest_aggregator_round_id.read();
@@ -781,14 +777,14 @@ mod Aggregator {
                         block_num: block_info.block_number,
                         observation_timestamp,
                         transmission_timestamp: block_info.block_timestamp,
-                    }
+                    },
                 );
 
             // NOTE: Usually validating via validator would happen here, currently disabled
 
             let billing = self._billing.read();
             let reimbursement_juels = calculate_reimbursement(
-                juels_per_fee_coin, signatures_len, gas_price, billing
+                juels_per_fee_coin, signatures_len, gas_price, billing,
             );
 
             // end report()
@@ -808,8 +804,8 @@ mod Aggregator {
                             config_digest: report_context.config_digest,
                             epoch_and_round: report_context.epoch_and_round,
                             reimbursement: reimbursement_juels,
-                        }
-                    )
+                        },
+                    ),
                 );
 
             // pay transmitter
@@ -824,25 +820,24 @@ mod Aggregator {
             self: @ContractState,
             msg: felt252,
             ref signatures: Array<Signature>,
-            mut signed_count: u128
+            mut signed_count: u128,
         ) {
             let mut span = signatures.span();
-            while let Option::Some(signature) = span
-                .pop_front() {
-                    let index = self._signers.read(*signature.public_key);
-                    assert(index != 0_usize, 'invalid signer'); // 0 index == uninitialized
+            while let Option::Some(signature) = span.pop_front() {
+                let index = self._signers.read(*signature.public_key);
+                assert(index != 0_usize, 'invalid signer'); // 0 index == uninitialized
 
-                    let indexed_bit = pow(2_u128, index.into() - 1_u128);
-                    let prev_signed_count = signed_count;
-                    signed_count = signed_count | indexed_bit;
-                    assert(prev_signed_count != signed_count, 'duplicate signer');
+                let indexed_bit = pow(2_u128, index.into() - 1_u128);
+                let prev_signed_count = signed_count;
+                signed_count = signed_count | indexed_bit;
+                assert(prev_signed_count != signed_count, 'duplicate signer');
 
-                    let is_valid = ecdsa::check_ecdsa_signature(
-                        msg, *signature.public_key, *signature.r, *signature.s
-                    );
+                let is_valid = ecdsa::check_ecdsa_signature(
+                    msg, *signature.public_key, *signature.r, *signature.s,
+                );
 
-                    assert(is_valid, '');
-                };
+                assert(is_valid, '');
+            };
         }
     }
 
@@ -868,7 +863,7 @@ mod Aggregator {
 
     #[derive(Drop, starknet::Event)]
     struct BillingSet {
-        config: BillingConfig
+        config: BillingConfig,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -885,13 +880,13 @@ mod Aggregator {
         #[key]
         old_link_token: ContractAddress,
         #[key]
-        new_link_token: ContractAddress
+        new_link_token: ContractAddress,
     }
 
     #[abi(embed_v0)]
     impl BillingImpl of super::Billing<ContractState> {
         fn set_link_token(
-            ref self: ContractState, link_token: ContractAddress, recipient: ContractAddress
+            ref self: ContractState, link_token: ContractAddress, recipient: ContractAddress,
         ) {
             self.ownable.assert_only_owner();
 
@@ -919,13 +914,13 @@ mod Aggregator {
             self
                 .emit(
                     Event::LinkTokenSet(
-                        LinkTokenSet { old_link_token: old_token, new_link_token: link_token }
-                    )
+                        LinkTokenSet { old_link_token: old_token, new_link_token: link_token },
+                    ),
                 );
         }
 
         fn set_billing_access_controller(
-            ref self: ContractState, access_controller: ContractAddress
+            ref self: ContractState, access_controller: ContractAddress,
         ) {
             self.ownable.assert_only_owner();
 
@@ -939,9 +934,9 @@ mod Aggregator {
                 .emit(
                     Event::BillingAccessControllerSet(
                         BillingAccessControllerSet {
-                            old_controller: old_controller, new_controller: access_controller
-                        }
-                    )
+                            old_controller: old_controller, new_controller: access_controller,
+                        },
+                    ),
                 );
         }
 
@@ -1002,7 +997,7 @@ mod Aggregator {
         }
 
         fn link_available_for_payment(
-            self: @ContractState
+            self: @ContractState,
         ) -> (bool, u128) { // (is negative, absolute difference)
             let link_token = self._link_token.read();
             let contract_address = starknet::info::get_contract_address();
@@ -1035,11 +1030,11 @@ mod Aggregator {
 
             let access_controller = self._billing_access_controller.read();
             let access_controller = IAccessControllerDispatcher {
-                contract_address: access_controller
+                contract_address: access_controller,
             };
             assert(
                 access_controller.has_access(caller, ArrayTrait::new()),
-                'caller does not have access'
+                'caller does not have access',
             );
         }
 
@@ -1063,7 +1058,7 @@ mod Aggregator {
             ref self: ContractState,
             transmitter: ContractAddress,
             latest_round_id: u128,
-            link_token: ContractAddress
+            link_token: ContractAddress,
         ) {
             let oracle = self._transmitters.read(transmitter);
             if oracle.index == 0_usize {
@@ -1097,9 +1092,9 @@ mod Aggregator {
                             transmitter: transmitter,
                             payee: payee,
                             amount: amount,
-                            link_token: link_token
-                        }
-                    )
+                            link_token: link_token,
+                        },
+                    ),
                 );
         }
 
@@ -1146,7 +1141,7 @@ mod Aggregator {
     const MARGIN: u128 = 115_u128;
 
     fn calculate_reimbursement(
-        juels_per_fee_coin: u128, signature_count: usize, gas_price: u128, config: BillingConfig
+        juels_per_fee_coin: u128, signature_count: usize, gas_price: u128, config: BillingConfig,
     ) -> u128 {
         // TODO: determine new values for these constants
         // Based on estimateFee (f=1 14977, f=2 14989, f=3 15002 f=4 15014 f=5 15027, count = f+1)
@@ -1189,30 +1184,29 @@ mod Aggregator {
     impl PayeeManagementImpl of super::PayeeManagement<ContractState> {
         fn set_payees(ref self: ContractState, mut payees: Array<PayeeConfig>) {
             self.ownable.assert_only_owner();
-            while let Option::Some(payee) = payees
-                .pop_front() {
-                    let current_payee = self._payees.read(payee.transmitter);
-                    let is_unset = current_payee.is_zero();
-                    let is_same = current_payee == payee.payee;
-                    assert(is_unset | is_same, 'payee already set');
+            while let Option::Some(payee) = payees.pop_front() {
+                let current_payee = self._payees.read(payee.transmitter);
+                let is_unset = current_payee.is_zero();
+                let is_same = current_payee == payee.payee;
+                assert(is_unset | is_same, 'payee already set');
 
-                    self._payees.write(payee.transmitter, payee.payee);
+                self._payees.write(payee.transmitter, payee.payee);
 
-                    self
-                        .emit(
-                            Event::PayeeshipTransferred(
-                                PayeeshipTransferred {
-                                    transmitter: payee.transmitter,
-                                    previous: current_payee,
-                                    current: payee.payee
-                                }
-                            )
-                        );
-                }
+                self
+                    .emit(
+                        Event::PayeeshipTransferred(
+                            PayeeshipTransferred {
+                                transmitter: payee.transmitter,
+                                previous: current_payee,
+                                current: payee.payee,
+                            },
+                        ),
+                    );
+            }
         }
 
         fn transfer_payeeship(
-            ref self: ContractState, transmitter: ContractAddress, proposed: ContractAddress
+            ref self: ContractState, transmitter: ContractAddress, proposed: ContractAddress,
         ) {
             assert(!proposed.is_zero(), 'cannot transfer to zero address');
             let caller = starknet::info::get_caller_address();
@@ -1225,9 +1219,9 @@ mod Aggregator {
                 .emit(
                     Event::PayeeshipTransferRequested(
                         PayeeshipTransferRequested {
-                            transmitter: transmitter, current: payee, proposed: proposed
-                        }
-                    )
+                            transmitter: transmitter, current: payee, proposed: proposed,
+                        },
+                    ),
                 );
         }
 
@@ -1243,9 +1237,9 @@ mod Aggregator {
                 .emit(
                     Event::PayeeshipTransferred(
                         PayeeshipTransferred {
-                            transmitter: transmitter, previous: previous, current: caller
-                        }
-                    )
+                            transmitter: transmitter, previous: previous, current: caller,
+                        },
+                    ),
                 );
         }
     }

@@ -12,20 +12,25 @@ use option::OptionTrait;
 use core::result::ResultTrait;
 
 use chainlink::ocr2::mocks::mock_aggregator::{
-    MockAggregator, IMockAggregator, IMockAggregatorDispatcher, IMockAggregatorDispatcherTrait
+    MockAggregator, IMockAggregator, IMockAggregatorDispatcher, IMockAggregatorDispatcherTrait,
 };
 use chainlink::ocr2::aggregator_proxy::AggregatorProxy;
 use chainlink::ocr2::aggregator_proxy::AggregatorProxy::{
-    AggregatorProxyImpl, AggregatorProxyInternal, UpgradeableImpl
+    AggregatorProxyImpl, AggregatorProxyInternal,
 };
-use chainlink::libraries::access_control::AccessControlComponent::AccessControlImpl;
+use chainlink::libraries::access_control::{
+    IAccessControllerDispatcher, IAccessControllerDispatcherTrait,
+    AccessControlComponent::AccessControlImpl,
+};
+use chainlink::libraries::upgrades::v2::owner_upgradeable::OwnerUpgradeableComponent::OwnerUpgradeableImpl;
 use chainlink::ocr2::aggregator::Round;
 use chainlink::utils::split_felt;
 use chainlink::tests::test_ownable::should_implement_ownable;
 use chainlink::tests::test_access_controller::should_implement_access_control;
 
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address_global, stop_cheat_caller_address_global
+    declare, ContractClassTrait, start_cheat_caller_address_global,
+    stop_cheat_caller_address_global, DeclareResultTrait,
 };
 
 
@@ -38,7 +43,7 @@ fn setup() -> (
     ContractAddress,
     IMockAggregatorDispatcher,
     ContractAddress,
-    IMockAggregatorDispatcher
+    IMockAggregatorDispatcher,
 ) {
     // Set account as default caller
     let account: ContractAddress = contract_address_const::<1>();
@@ -49,19 +54,20 @@ fn setup() -> (
     let mut calldata = ArrayTrait::new();
     calldata.append(8); // decimals = 8
 
-    let contract_class = declare("MockAggregator").unwrap();
+    let contract = declare("MockAggregator").unwrap().contract_class();
 
-    let (mockAggregatorAddr1, _) = contract_class.deploy(@calldata).unwrap();
+    let (mockAggregatorAddr1, _) = contract.deploy(@calldata).unwrap();
 
     let mockAggregator1 = IMockAggregatorDispatcher { contract_address: mockAggregatorAddr1 };
 
     // Deploy mock aggregator 2
     // note: deployment address is deterministic based on deploy_syscall parameters
-    // so we need to change the decimals parameter to avoid an address conflict with mock aggregator 1
+    // so we need to change the decimals parameter to avoid an address conflict with mock aggregator
+    // 1
     let mut calldata2 = ArrayTrait::new();
     calldata2.append(10); // decimals = 10
 
-    let (mockAggregatorAddr2, _) = contract_class.deploy(@calldata).unwrap();
+    let (mockAggregatorAddr2, _) = contract.deploy(@calldata).unwrap();
 
     let mockAggregator2 = IMockAggregatorDispatcher { contract_address: mockAggregatorAddr2 };
 
@@ -74,8 +80,12 @@ fn test_ownable() {
     let (account, mockAggregatorAddr, _, _, _) = setup();
     // Deploy aggregator proxy
     let calldata = array![account.into(), // owner = account
-     mockAggregatorAddr.into(),];
-    let (aggregatorProxyAddr, _) = declare("AggregatorProxy").unwrap().deploy(@calldata).unwrap();
+    mockAggregatorAddr.into()];
+    let (aggregatorProxyAddr, _) = declare("AggregatorProxy")
+        .unwrap()
+        .contract_class()
+        .deploy(@calldata)
+        .unwrap();
 
     should_implement_ownable(aggregatorProxyAddr, account);
 }
@@ -85,9 +95,16 @@ fn test_access_control() {
     let (account, mockAggregatorAddr, _, _, _) = setup();
     // Deploy aggregator proxy
     let calldata = array![account.into(), // owner = account
-     mockAggregatorAddr.into(),];
+    mockAggregatorAddr.into()];
 
-    let (aggregatorProxyAddr, _) = declare("AggregatorProxy").unwrap().deploy(@calldata).unwrap();
+    let (aggregatorProxyAddr, _) = declare("AggregatorProxy")
+        .unwrap()
+        .contract_class()
+        .deploy(@calldata)
+        .unwrap();
+
+    // proxy by default disables the access check, so we re-enable for testing purposes
+    IAccessControllerDispatcher { contract_address: aggregatorProxyAddr }.enable_access_check();
 
     should_implement_access_control(aggregatorProxyAddr, account);
 }
@@ -97,7 +114,7 @@ fn test_access_control() {
 fn test_upgrade_non_owner() {
     let (_, _, _, _, _) = setup();
     let mut state = STATE();
-    UpgradeableImpl::upgrade(ref state, class_hash_const::<123>());
+    OwnerUpgradeableImpl::upgrade(ref state, class_hash_const::<123>());
 }
 
 fn test_query_latest_round_data() {
@@ -118,13 +135,12 @@ fn test_query_latest_round_data() {
     assert(round.started_at == 9, 'started_at should be 9');
     assert(round.updated_at == 8, 'updated_at should be 8');
 
-    // latest_answer matches up with latest_round_data 
+    // latest_answer matches up with latest_round_data
     let latest_answer = AggregatorProxyImpl::latest_answer(@state);
     assert(latest_answer == 10, '(latest) answer should be 10');
 }
 
 #[test]
-#[should_panic(expected: ('user does not have read access',))]
 fn test_query_latest_round_data_without_access() {
     let (owner, mockAggregatorAddr, mockAggregator, _, _) = setup();
     let mut state = STATE();
@@ -140,7 +156,6 @@ fn test_query_latest_round_data_without_access() {
 }
 
 #[test]
-#[should_panic(expected: ('user does not have read access',))]
 fn test_query_latest_answer_without_access() {
     let (owner, mockAggregatorAddr, mockAggregator, _, _) = setup();
     let mut state = STATE();

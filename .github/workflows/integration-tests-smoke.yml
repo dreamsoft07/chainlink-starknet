@@ -76,7 +76,9 @@ jobs:
       - name: Set core reference if workflow dispatch
         if: steps.check-image.outputs.exists == 'false' && github.event_name == 'workflow_dispatch'
         run: |
-          echo "CUSTOM_CORE_REF=${{ github.event.inputs.cl_branch_ref }}" >> "${GITHUB_ENV}"
+          echo "CUSTOM_CORE_REF=${CL_REF}" >> "${GITHUB_ENV}"
+        env:
+          CL_REF: ${{ github.event.inputs.cl_branch_ref }}
       - name: Build Image ${{ matrix.image.name }}
         if: steps.check-image.outputs.exists == 'false'
         uses: smartcontractkit/.github/actions/ctf-build-image@c4705bfdbf6c8e57c080d82a3c4f013aa96a2dfb # v2.3.19
@@ -125,6 +127,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
         with:
           ref: ${{ github.sha }}
+          persist-credentials: false
       - name: Build Image
         uses: ./.github/actions/build-test-image
         with:
@@ -169,6 +172,8 @@ jobs:
         continue-on-error: true
       - name: Checkout the repo
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+        with:
+          persist-credentials: false
       - name: Install Nix
         uses: cachix/install-nix-action@3715ab1a11cac9e991980d7b4a28d80c7ebdd8f9 # nix:v2.24.6
         with:
@@ -194,7 +199,7 @@ jobs:
           [Network]
           selected_networks=["SIMULATED"]
           [Common]
-          internal_docker_repo = "${{ env.INTERNAL_DOCKER_REPO }}"
+          internal_docker_repo = "${INTERNAL_DOCKER_REPO}"
           stateful_db = false
           EOF
           # shellcheck disable=SC2002
@@ -206,6 +211,7 @@ jobs:
       - name: Run Tests ${{ matrix.image.name }}
         uses: smartcontractkit/.github/actions/ctf-run-tests@4229fea727f6eb36b4559c6eefbbf9f3825fa677 # 0.2.1
         with:
+          cl_internal_docker_repo: ${{ env.INTERNAL_DOCKER_REPO }}
           aws_registries: ${{ secrets.QA_AWS_ACCOUNT_NUMBER }}
           test_command_to_run: nix develop -c sh -c "make test=${{ matrix.image.test-name }} test-integration-smoke-ci"
           test_download_vendor_packages_command: cd integration-tests && nix develop -c go mod download

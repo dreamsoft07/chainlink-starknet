@@ -15,10 +15,10 @@ use core::result::ResultTrait;
 
 use chainlink::emergency::sequencer_uptime_feed::SequencerUptimeFeed;
 use chainlink::libraries::access_control::{
-    IAccessController, IAccessControllerDispatcher, IAccessControllerDispatcherTrait
+    IAccessController, IAccessControllerDispatcher, IAccessControllerDispatcherTrait,
 };
 use chainlink::ocr2::aggregator_proxy::{
-    IAggregatorProxy, IAggregatorProxyDispatcher, IAggregatorProxyDispatcherTrait
+    IAggregatorProxy, IAggregatorProxyDispatcher, IAggregatorProxyDispatcherTrait,
 };
 use chainlink::ocr2::aggregator_proxy::AggregatorProxy;
 use chainlink::ocr2::aggregator_proxy::AggregatorProxy::AggregatorProxyImpl;
@@ -26,11 +26,12 @@ use chainlink::tests::test_ownable::should_implement_ownable;
 use chainlink::tests::test_access_controller::should_implement_access_control;
 
 use chainlink::emergency::sequencer_uptime_feed::{
-    ISequencerUptimeFeed, ISequencerUptimeFeedDispatcher, ISequencerUptimeFeedDispatcherTrait
+    ISequencerUptimeFeed, ISequencerUptimeFeedDispatcher, ISequencerUptimeFeedDispatcherTrait,
 };
 
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address_global, stop_cheat_caller_address_global
+    declare, ContractClassTrait, start_cheat_caller_address_global,
+    stop_cheat_caller_address_global, DeclareResultTrait,
 };
 
 
@@ -49,13 +50,17 @@ fn setup() -> (ContractAddress, ContractAddress, ISequencerUptimeFeedDispatcher)
 
     // Deploy seqeuencer uptime feed
     let calldata = array![0, // initial status
-     account.into() // owner
+    account.into() // owner
     ];
 
-    let (sequencerFeedAddr, _) = declare("SequencerUptimeFeed").unwrap().deploy(@calldata).unwrap();
+    let (sequencerFeedAddr, _) = declare("SequencerUptimeFeed")
+        .unwrap()
+        .contract_class()
+        .deploy(@calldata)
+        .unwrap();
 
     let sequencerUptimeFeed = ISequencerUptimeFeedDispatcher {
-        contract_address: sequencerFeedAddr
+        contract_address: sequencerFeedAddr,
     };
 
     (account, sequencerFeedAddr, sequencerUptimeFeed)
@@ -74,7 +79,7 @@ fn test_access_control() {
 }
 
 #[test]
-#[should_panic()]
+#[should_panic]
 fn test_set_l1_sender_not_owner() {
     let (_, _, sequencerUptimeFeed) = setup();
     start_cheat_caller_address_global(contract_address_const::<111>());
@@ -120,7 +125,7 @@ fn test_aggregator_proxy_response() {
     let latest_round_data = proxy.latest_round_data();
     assert(latest_round_data.answer == 0, 'latest_round_data should be 0');
 
-    // latest answer 
+    // latest answer
     let latest_answer = proxy.latest_answer();
     assert(latest_answer == 0, 'latest_answer should be 0');
 

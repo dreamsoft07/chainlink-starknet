@@ -9,7 +9,7 @@ fn main() {
         .try_into()
         .unwrap();
 
-    // Feel free to modify these 
+    // Feel free to modify these
     let answer = 1;
     let block_num = 12345;
     let observation_timestamp = 1711716556;
@@ -20,7 +20,7 @@ fn main() {
         selector!("set_latest_round_data"),
         array![answer, block_num, observation_timestamp, transmission_timestamp],
         Option::None,
-        Option::Some(get_nonce('pending'))
+        Option::Some(get_nonce('pending')),
     );
 
     if result.is_err() {

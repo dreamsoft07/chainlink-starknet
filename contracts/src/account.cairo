@@ -1,11 +1,14 @@
-// copied from https://raw.githubusercontent.com/OpenZeppelin/cairo-contracts/861fc416f87addbe23a3b47f9d19ab27c10d5dc8/src/presets/account.cairo (0.9.0)
+// copied from
+// https://raw.githubusercontent.com/OpenZeppelin/cairo-contracts/861fc416f87addbe23a3b47f9d19ab27c10d5dc8/src/presets/account.cairo
+// (0.9.0)
 
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts for Cairo v0.9.0 (presets/account.cairo)
 
 /// # Account Preset
 ///
-/// OpenZeppelin's basic account which can change its public key and declare, deploy, or call contracts.
+/// OpenZeppelin's basic account which can change its public key and declare, deploy, or call
+/// contracts.
 #[starknet::contract(account)]
 mod Account {
     use openzeppelin::account::AccountComponent;
@@ -38,7 +41,7 @@ mod Account {
         #[substorage(v0)]
         account: AccountComponent::Storage,
         #[substorage(v0)]
-        src5: SRC5Component::Storage
+        src5: SRC5Component::Storage,
     }
 
     #[event]
@@ -47,7 +50,7 @@ mod Account {
         #[flat]
         AccountEvent: AccountComponent::Event,
         #[flat]
-        SRC5Event: SRC5Component::Event
+        SRC5Event: SRC5Component::Event,
     }
 
     #[constructor]

@@ -14,6 +14,7 @@ trait IAccessController<TContractState> {
 mod AccessControlComponent {
     use starknet::ContractAddress;
     use starknet::class_hash::ClassHash;
+    use starknet::storage::Map;
     use zeroable::Zeroable;
 
     use openzeppelin::access::ownable::OwnableComponent;
@@ -23,7 +24,7 @@ mod AccessControlComponent {
     #[storage]
     struct Storage {
         _check_enabled: bool,
-        _access_list: LegacyMap<ContractAddress, bool>,
+        _access_list: Map<ContractAddress, bool>,
     }
 
     #[event]
@@ -38,13 +39,13 @@ mod AccessControlComponent {
     #[derive(Drop, starknet::Event)]
     struct AddedAccess {
         #[key]
-        user: ContractAddress
+        user: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
     struct RemovedAccess {
         #[key]
-        user: ContractAddress
+        user: ContractAddress,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -61,7 +62,7 @@ mod AccessControlComponent {
         +Drop<TContractState>,
     > of super::IAccessController<ComponentState<TContractState>> {
         fn has_access(
-            self: @ComponentState<TContractState>, user: ContractAddress, data: Array<felt252>
+            self: @ComponentState<TContractState>, user: ContractAddress, data: Array<felt252>,
         ) -> bool {
             let has_access = self._access_list.read(user);
             if has_access {
@@ -77,7 +78,7 @@ mod AccessControlComponent {
         }
 
         fn has_read_access(
-            self: @ComponentState<TContractState>, user: ContractAddress, data: Array<felt252>
+            self: @ComponentState<TContractState>, user: ContractAddress, data: Array<felt252>,
         ) -> bool {
             let _has_access = self.has_access(user, data);
             if _has_access {
@@ -136,9 +137,11 @@ mod AccessControlComponent {
         impl Ownable: OwnableComponent::HasComponent<TContractState>,
         +Drop<TContractState>,
     > of InternalTrait<TContractState> {
-        fn initializer(ref self: ComponentState<TContractState>) {
-            self._check_enabled.write(true);
-            self.emit(Event::AccessControlEnabled(AccessControlEnabled {}));
+        fn initializer(ref self: ComponentState<TContractState>, check_enabled: bool) {
+            self._check_enabled.write(check_enabled);
+            if check_enabled {
+                self.emit(Event::AccessControlEnabled(AccessControlEnabled {}));
+            }
         }
 
         fn check_access(self: @ComponentState<TContractState>, user: ContractAddress) {

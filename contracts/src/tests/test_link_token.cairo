@@ -1,6 +1,6 @@
 use starknet::{
     syscalls::deploy_syscall, ContractAddress, testing::set_caller_address, contract_address_const,
-    class_hash::{class_hash_const, Felt252TryIntoClassHash}
+    class_hash::{class_hash_const, Felt252TryIntoClassHash},
 };
 
 use array::ArrayTrait;
@@ -9,18 +9,18 @@ use zeroable::Zeroable;
 use option::OptionTrait;
 use core::result::ResultTrait;
 
-use chainlink::token::v2::link_token::{
-    LinkToken, LinkToken::{MintableToken, UpgradeableImpl, Minter}
-};
+use chainlink::token::v2::link_token::{LinkToken, LinkToken::{MintableToken, Minter}};
+use chainlink::libraries::upgrades::v2::owner_upgradeable::OwnerUpgradeableComponent::OwnerUpgradeableImpl;
 use openzeppelin::token::erc20::ERC20Component::{ERC20Impl, ERC20MetadataImpl};
 use chainlink::tests::test_ownable::should_implement_ownable;
 
 use snforge_std::{
-    declare, ContractClassTrait, start_cheat_caller_address_global, stop_cheat_caller_address_global
+    declare, ContractClassTrait, start_cheat_caller_address_global,
+    stop_cheat_caller_address_global, DeclareResultTrait,
 };
 
 
-// only tests link token specific functionality 
+// only tests link token specific functionality
 // erc20 and erc677 functionality is already tested elsewhere
 
 fn STATE() -> LinkToken::ContractState {
@@ -59,10 +59,10 @@ fn test_ownable() {
     let account = setup();
     // Deploy LINK token
     let calldata = link_deploy_args(contract_address_const::<123>(), // minter
-     account // owner
+    account // owner
     );
 
-    let (linkAddr, _) = declare("LinkToken").unwrap().deploy(@calldata).unwrap();
+    let (linkAddr, _) = declare("LinkToken").unwrap().contract_class().deploy(@calldata).unwrap();
 
     should_implement_ownable(linkAddr, account);
 }
@@ -119,7 +119,7 @@ fn test_permissioned_mint_from_nonminter() {
 }
 
 #[test]
-#[should_panic(expected: ('u256_sub Overflow',))]
+#[should_panic(expected: ('ERC20: insufficient balance',))]
 fn test_permissioned_burn_from_minter() {
     let zero = 0;
     let sender = setup();
@@ -165,10 +165,10 @@ fn test_upgrade_non_owner() {
     let sender = setup();
     let mut state = STATE();
     LinkToken::constructor(
-        ref state, 0, 0, 0, 0, Zeroable::zero(), sender, contract_address_const::<111>(), 0
+        ref state, 0, 0, 0, 0, Zeroable::zero(), sender, contract_address_const::<111>(), 0,
     );
 
-    UpgradeableImpl::upgrade(ref state, class_hash_const::<123>());
+    OwnerUpgradeableImpl::upgrade(ref state, class_hash_const::<123>());
 }
 
 #[test]
@@ -177,7 +177,7 @@ fn test_set_minter_non_owner() {
     let sender = setup();
     let mut state = STATE();
     LinkToken::constructor(
-        ref state, 0, 0, 0, 0, Zeroable::zero(), sender, contract_address_const::<111>(), 0
+        ref state, 0, 0, 0, 0, Zeroable::zero(), sender, contract_address_const::<111>(), 0,
     );
 
     Minter::set_minter(ref state, contract_address_const::<123>())
@@ -193,6 +193,18 @@ fn test_set_minter_already() {
     LinkToken::constructor(ref state, 0, 0, 0, 0, Zeroable::zero(), minter, sender, 0);
 
     Minter::set_minter(ref state, minter);
+}
+
+#[test]
+#[should_panic(expected: ('minter is 0',))]
+fn test_set_minter_zero() {
+    let sender = setup();
+    let mut state = STATE();
+
+    let minter = contract_address_const::<111>();
+    LinkToken::constructor(ref state, 0, 0, 0, 0, Zeroable::zero(), minter, sender, 0);
+
+    Minter::set_minter(ref state, Zeroable::zero());
 }
 
 #[test]

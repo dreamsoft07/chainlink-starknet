@@ -1,6 +1,8 @@
 use starknet::class_hash::ClassHash;
 
-// TODO: drop for OZ upgradeable
+// DEPRECATED: Kept around for the starknet multisig.
+// Use OZ for internal upgradeability and v2/owner_upgradeable.cairo for public owner
+// upgradeablility
 
 #[starknet::interface]
 trait IUpgradeable<TContractState> {
@@ -11,7 +13,7 @@ trait IUpgradeable<TContractState> {
 #[derive(Drop, starknet::Event)]
 struct Upgraded {
     #[key]
-    new_impl: ClassHash
+    new_impl: ClassHash,
 }
 
 mod Upgradeable {
@@ -25,11 +27,11 @@ mod Upgradeable {
 
     // this method assumes replace_class_syscall has a very low possibility of being deprecated
     // but if it does, we will either have upgraded the contract to be non-upgradeable by then
-    // because the starknet ecosystem has stabilized or we will be able to upgrade the contract to the proxy pattern
-    // #[internal]
+    // because the starknet ecosystem has stabilized or we will be able to upgrade the contract to
+    // the proxy pattern #[internal]
     fn upgrade(new_impl: ClassHash) {
         assert(!new_impl.is_zero(), 'Class hash cannot be zero');
         replace_class_syscall(new_impl).unwrap_syscall();
-    // TODO: Upgraded(new_impl);
+        // TODO: Upgraded(new_impl);
     }
 }
